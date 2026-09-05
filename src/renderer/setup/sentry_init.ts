@@ -1,30 +1,78 @@
 import * as Sentry from '@sentry/react'
-import platform from '../packages/platform'
+import { createSentryEventProcessor } from '@shared/utils/sentry_policy'
+import { initSettingsStore, settingsStore } from '@/stores/settingsStore'
+import { CHATBOX_BUILD_PLATFORM, CHATBOX_BUILD_TARGET, NODE_ENV } from '@/variables'
+import platform from '../platform'
 
-;(async () => {
-    const settings = await platform.getSettings()
+const processSentryEvent = createSentryEventProcessor({
+  normalSampleRate: 0.1,
+  source: 'renderer',
+})
 
-    // ONLY enable Sentry when reporting and tracking is allowed by the user
-    if (! settings.allowReportingAndTracking) {
-        return
+let sentryInitPromise: Promise<boolean> | undefined
+
+async function initializeSentry(): Promise<boolean> {
+  try {
+    const settings = await initSettingsStore()
+    if (!settings.allowReportingAndTracking) {
+      return false
     }
 
     const version = await platform.getVersion().catch(() => 'unknown')
+    if (!settingsStore.getState().allowReportingAndTracking) {
+      return false
+    }
     Sentry.init({
-        dsn: 'https://3cf8d15960fc432cb886d6f62e3716dc@o180365.ingest.sentry.io/4505411943464960',
-        integrations: [
-            new Sentry.BrowserTracing({
-                // Set `tracePropagationTargets` to control for which URLs distributed tracing should be enabled
-                tracePropagationTargets: ['localhost', /^https:\/\/chatboxai\.app/, /^https:\/\/chatboxapp\.xyz/],
-            }),
-            new Sentry.Replay(),
-        ],
-        // Performance Monitoring
-        sampleRate: 0.1,
-        tracesSampleRate: 0.1, // Capture 100% of the transactions, reduce in production!
-        // Session Replay
-        replaysSessionSampleRate: 0.05, // This sets the sample rate at 10%. You may want to change it to 100% while in development and then sample at a lower rate in production.
-        replaysOnErrorSampleRate: 0.05, // If you're not already sampling the entire session, change the sample rate to 100% when sampling sessions where errors occur.
-        release: version,
+      dsn: 'https://eca691c5e01ebfa05958fca1fcb487a9@sentry.midway.run/697',
+      environment: NODE_ENV,
+      sampleRate: 1.0,
+      tracesSampleRate: 0.1,
+      replaysSessionSampleRate: 0.05,
+      replaysOnErrorSampleRate: 0.05,
+      release: version,
+      initialScope: {
+        tags: {
+          platform: platform.type,
+          app_version: version,
+          build_target: CHATBOX_BUILD_TARGET,
+          build_platform: CHATBOX_BUILD_PLATFORM,
+          error_source: 'renderer',
+        },
+      },
+      beforeBreadcrumb(breadcrumb) {
+        // Console output is already persisted in local app logs and can contain user data.
+        return breadcrumb.category === 'console' ? null : breadcrumb
+      },
+      beforeSend(event, hint) {
+        if (!settingsStore.getState().allowReportingAndTracking) {
+          return null
+        }
+        return processSentryEvent(event, hint)
+      },
     })
-})()
+    return true
+  } catch (e) {
+    console.error('Failed to initialize Sentry:', e)
+    return false
+  }
+}
+
+export function initSentry(): Promise<boolean> {
+  sentryInitPromise ??= initializeSentry()
+  return sentryInitPromise
+}
+
+settingsStore.subscribe((settings, previousSettings) => {
+  if (settings.allowReportingAndTracking === previousSettings.allowReportingAndTracking) {
+    return
+  }
+
+  sentryInitPromise = undefined
+  if (settings.allowReportingAndTracking) {
+    void initSentry()
+  } else {
+    void Sentry.close(2000)
+  }
+})
+
+export default Sentry

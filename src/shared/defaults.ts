@@ -1,69 +1,39 @@
-import { Theme, Config, Settings, ModelProvider, Session } from './types'
+import { createDefaultSettings, DEFAULT_SYSTEM_PROMPT } from '@chatbox/core/domain/settings'
 import { v4 as uuidv4 } from 'uuid'
+import { type Config, ModelProviderEnum, type SessionSettings, type Settings } from './types'
 
+/**
+ * Compatibility export. Global Settings defaults are owned by the Settings
+ * domain so React Native consumers do not load UUID/provider dependencies.
+ */
 export function settings(): Settings {
-    return {
-        aiProvider: ModelProvider.OpenAI,
-        openaiKey: '',
-        apiHost: 'https://api.openai.com',
-
-        azureApikey: '',
-        azureDeploymentName: '',
-        azureDalleDeploymentName: 'dall-e-3',
-        azureEndpoint: '',
-        chatglm6bUrl: '',
-        model: 'gpt-3.5-turbo',
-        temperature: 0.7,
-        topP: 1,
-        // openaiMaxTokens: 0,
-        // openaiMaxContextTokens: 4000,
-        openaiMaxContextMessageCount: 10,
-        // maxContextSize: "4000",
-        // maxTokens: "2048",
-
-        claudeApiKey: '',
-        claudeApiHost: 'https://api.anthropic.com',
-        claudeModel: 'claude-3-5-sonnet-20241022',
-
-        ollamaHost: 'http://127.0.0.1:11434',
-        ollamaModel: '',
-
-        lmStudioHost: 'http://127.0.0.1:1234',
-        lmStudioModel: '',
-
-        showWordCount: true,
-        showTokenCount: false,
-        showTokenUsed: true,
-        showModelName: true,
-        showMessageTimestamp: false,
-        userAvatarKey: '',
-        theme: Theme.FollowSystem,
-        language: 'en',
-        fontSize: 12,
-        spellCheck: true,
-
-        defaultPrompt: getDefaultPrompt(),
-
-        allowReportingAndTracking: true,
-
-        enableMarkdownRendering: true,
-
-        siliconCloudHost: 'https://api.siliconflow.cn',
-        siliconCloudKey: '',
-        siliconCloudModel: 'THUDM/glm-4-9b-chat',
-
-        autoGenerateTitle: true,
-    }
+  return createDefaultSettings()
 }
 
 export function newConfigs(): Config {
-    return { uuid: uuidv4() }
+  return { uuid: uuidv4() }
 }
 
 export function getDefaultPrompt() {
-    return 'You are a helpful assistant. You can help me by answering my questions. You can also ask me questions.'
+  return DEFAULT_SYSTEM_PROMPT
 }
 
-export function sessions(): Session[] {
-    return [{ id: uuidv4(), name: 'Untitled', messages: [], type: 'chat' }]
+export function chatSessionSettings(): SessionSettings {
+  return {
+    provider: ModelProviderEnum.ChatboxAI,
+    modelId: 'chatboxai-4',
+    maxContextMessageCount: Number.MAX_SAFE_INTEGER,
+  }
 }
+
+export function pictureSessionSettings(): SessionSettings {
+  return {
+    provider: ModelProviderEnum.ChatboxAI,
+    modelId: 'DALL-E-3',
+    imageGenerateNum: 1,
+    dalleStyle: 'vivid',
+  }
+}
+
+// SystemProviders is generated from the provider registry.
+export { getSystemProviders as SystemProviders } from './providers/registry'

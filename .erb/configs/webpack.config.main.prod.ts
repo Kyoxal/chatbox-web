@@ -3,17 +3,16 @@
  */
 
 import path from 'path'
-import webpack from 'webpack'
-import { merge } from 'webpack-merge'
 import TerserPlugin from 'terser-webpack-plugin'
+import webpack from 'webpack'
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer'
+import { merge } from 'webpack-merge'
+import JavaScriptObfuscator from 'webpack-obfuscator'
+import checkNodeEnv from '../scripts/check-node-env'
 import baseConfig from './webpack.config.base'
 import webpackPaths from './webpack.paths'
-import checkNodeEnv from '../scripts/check-node-env'
-import deleteSourceMaps from '../scripts/delete-source-maps'
 
 checkNodeEnv('production')
-deleteSourceMaps()
 
 const configuration: webpack.Configuration = {
     devtool: false,
@@ -68,6 +67,12 @@ const configuration: webpack.Configuration = {
             'process.type': '"browser"',
         }),
 
+        new JavaScriptObfuscator({
+            target: 'node',
+            optionsPreset: 'default',
+            // 默认的变量名混淆，可能被误报为恶意代码
+            identifierNamesGenerator: 'mangled-shuffled',
+        }),
     ],
 
     /**

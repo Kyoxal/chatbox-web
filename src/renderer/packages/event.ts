@@ -1,13 +1,11 @@
-import platform from '@/packages/platform'
-import { allowReportingAndTrackingAtom } from '@/stores/atoms'
-import { getDefaultStore } from 'jotai'
+import type { AnalyticsEventParams } from '@shared/analytics'
+import platform from '@/platform'
+import { settingsStore } from '@/stores/settingsStore'
 
-export function trackingEvent(name: string, params: { [key: string]: string } = {}) {
-    const store = getDefaultStore()
-    // ONLY track when user allow
-    const allowReportingAndTracking = store.get(allowReportingAndTrackingAtom)
-    if (! allowReportingAndTracking) {
-        return
-    }
-    platform.trackingEvent(name, params)
+export function trackingEvent(name: string, params: AnalyticsEventParams = {}) {
+  const allowReportingAndTracking = settingsStore.getState().allowReportingAndTracking
+  if (!allowReportingAndTracking) {
+    return
+  }
+  platform.trackingEvent(name, params)
 }

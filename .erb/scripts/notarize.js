@@ -1,7 +1,5 @@
-const { notarize } = require('@electron/notarize')
-const { build } = require('../../package.json')
-
-exports.default = async function notarizeMacos(context) {
+module.exports = async function notarizeMacos(context) {
+    const { notarize } = await import('@electron/notarize')
     const { electronPlatformName, appOutDir } = context
     if (electronPlatformName !== 'darwin') {
         return
@@ -18,7 +16,7 @@ exports.default = async function notarizeMacos(context) {
 
     await notarize({
         tool: 'notarytool',
-        appBundleId: build.appId,
+        appBundleId: 'xyz.chatboxapp.app',
         appPath: `${appOutDir}/${appName}.app`,
         appleId: process.env.APPLE_ID,
         appleIdPassword: process.env.APPLE_ID_PASS,
